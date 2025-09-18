@@ -1,11 +1,11 @@
-self: super: { # final: prev:
+self: super: {
+  # final: prev:
 
   # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/os-specific/linux/firmware/raspberrypi/default.nix
   # pkgs/os-specific/linux/firmware/raspberrypi/default.nix
   # https://github.com/raspberrypi/firmware/commits/stable/
 
   # see `extra/git_hash` for a matching hash of the `raspberrypi/linux`
-
 
   raspberrypifw_20250829 = super.raspberrypifw.overrideAttrs (old: {
     # this release is untagged in the upstream for linux 6.12.44
@@ -26,7 +26,7 @@ self: super: { # final: prev:
       owner = "raspberrypi";
       repo = "firmware";
       rev = "7022a895240b2f853d9035ab61616b646caf7b3a";
-      hash = "sha256-VpjzwVzjgwBRXIfeGblnPzgjYyw7Nr1GqyjKtGnuduk=";
+      hash = "sha256-82RaKKPo1qYNMR3jbQActeZT/QlC55tUNpSLdZi+AfQ=";
     };
   });
 
@@ -212,14 +212,16 @@ self: super: { # final: prev:
   raspberrypiWirelessFirmware_20231115 = super.raspberrypiWirelessFirmware.overrideAttrs (old: {
     version = "unstable-2023-11-15";
     srcs = [
-      (super.fetchFromGitHub {  # 1.2-9+rpt2 release – 20231024
+      (super.fetchFromGitHub {
+        # 1.2-9+rpt2 release – 20231024
         name = "bluez-firmware";
         owner = "RPi-Distro";
         repo = "bluez-firmware";
         rev = "d9d4741caba7314d6500f588b1eaa5ab387a4ff5";
         hash = "sha256-CjbZ3t3TW/iJ3+t9QKEtM9NdQU7SwcUCDYuTmFEwvhU=";
       })
-      (super.fetchFromGitHub {  # 1:20230210-5+rpt2 release - 20231115
+      (super.fetchFromGitHub {
+        # 1:20230210-5+rpt2 release - 20231115
         name = "firmware-nonfree";
         owner = "RPi-Distro";
         repo = "firmware-nonfree";
