@@ -2,60 +2,118 @@
 
 let
   # use makeScope instead?
-  flib = lib.makeExtensible (flib_self: let
-    callLibs = file: import file { flib = flib_self; inherit self lib; };
-  in {
+  flib = lib.makeExtensible (
+    flib_self:
+    let
+      callLibs =
+        file:
+        import file {
+          flib = flib_self;
+          inherit self lib;
+        };
+    in
+    {
 
-  # NOTE: Endusers: please avoid using `int` (`internal`) directly
-  int = callLibs ./internal.nix;
+      # TIP: To create "regular" nixosConfigurations look for
+      # `nixosSystem` and `nixosSystemFull` helpers in `lib/`
 
-  nixosSystem = { nixpkgs ? self.inputs.nixpkgs
-                , trustCaches ? true
-                , ...
-                }@args: flib.int.nixosSystemRPi {
-    inherit nixpkgs trustCaches;
-    rpiModules = [ flib.int.default-nixos-raspberrypi-config ];
-  } args;
-  nixosSystemFull = { nixpkgs ? self.inputs.nixpkgs
-                    , trustCaches ? true
-                    , ...
-                    }@args: flib.int.nixosSystemRPi {
-    inherit nixpkgs trustCaches;
-    rpiModules = [ flib.int.full-nixos-raspberrypi-config ];
-  } args;
+      # TODO how is this differetn from nixosInstaller?
+      mkNixOSRPiInstaller =
+        modules:
+        self.nixosInstaller {
+          specialArgs = self.inputs // {
+            nixos-raspberrypi = self;
+          };
+          modules = [
+            self.inputs.nixos-images.nixosModules.sdimage-installer
+            (
+              {
+                config,
+                lib,
+                modulesPath,
+                ...
+              }:
+              {
+                disabledModules = [
+                  # disable the sd-image module that nixos-images uses
+                  (modulesPath + "/installer/sd-card/sd-image-aarch64-installer.nix")
+                ];
+                # nixos-images sets this with `mkForce`, thus `mkOverride 40`
+                image.baseName =
+                  let
+                    cfg = config.boot.loader.raspberryPi;
+                  in
+                  lib.mkOverride 40 "nixos-installer-rpi${cfg.variant}-${cfg.bootloader}";
+              }
+            )
+          ] ++ modules;
+        };
 
-  nixosInstaller = { nixpkgs ? self.inputs.nixpkgs
-                   , trustCaches ? true
-                   , ...
-                   }@args: flib.int.nixosSystemRPi {
-    inherit nixpkgs trustCaches;
-    rpiModules = [
-      flib.int.full-nixos-raspberrypi-config
-      self.nixosModules.sd-image
-      ../modules/installer/raspberrypi-installer.nix
-    ];
-  } args;
+      # NOTE: Endusers: please avoid using `int` (`internal`) directly
+      int = callLibs ./internal.nix;
 
-  # NOTE: Not sure how long these two will be provided as a part of public
-  # interface, please consider using `nixosSystem` or `nixosSystemFull`
-  inject-overlays = { config, lib, ... }: {
-    nixpkgs.overlays = [
-      self.overlays.bootloader
+      nixosSystem =
+        {
+          nixpkgs ? self.inputs.nixpkgs,
+          trustCaches ? true,
+          ...
+        }@args:
+        flib.int.nixosSystemRPi {
+          inherit nixpkgs trustCaches;
+          rpiModules = [ flib.int.default-nixos-raspberrypi-config ];
+        } args;
+      nixosSystemFull =
+        {
+          nixpkgs ? self.inputs.nixpkgs,
+          trustCaches ? true,
+          ...
+        }@args:
+        flib.int.nixosSystemRPi {
+          inherit nixpkgs trustCaches;
+          rpiModules = [ flib.int.full-nixos-raspberrypi-config ];
+        } args;
 
-      self.overlays.vendor-kernel
-      self.overlays.vendor-firmware
-      # self.overlays.vendor-kernel-nixpkgs
-      self.overlays.kernel-and-firmware
+      nixosInstaller =
+        {
+          nixpkgs ? self.inputs.nixpkgs,
+          trustCaches ? true,
+          ...
+        }@args:
+        flib.int.nixosSystemRPi {
+          inherit nixpkgs trustCaches;
+          rpiModules = [
+            flib.int.full-nixos-raspberrypi-config
+            self.nixosModules.sd-image
+            ../modules/installer/raspberrypi-installer.nix
+          ];
+        } args;
 
-      self.overlays.vendor-pkgs
-    ];
-  };
-  inject-overlays-global = { lib, ... }: {
-    nixpkgs.overlays = lib.mkBefore [
-      # !!! causes _lots_ of rebuilds for graphical stuff via ffmpeg, pipewire
-      self.overlays.pkgs
-    ];
-  };
+      # NOTE: Not sure how long these two will be provided as a part of public
+      # interface, please consider using `nixosSystem` or `nixosSystemFull`
+      inject-overlays =
+        { config, lib, ... }:
+        {
+          nixpkgs.overlays = [
+            self.overlays.bootloader
 
-  }); # flib
-in flib
+            self.overlays.vendor-kernel
+            self.overlays.vendor-firmware
+            # self.overlays.vendor-kernel-nixpkgs
+            self.overlays.kernel-and-firmware
+
+            self.overlays.vendor-pkgs
+          ];
+        };
+      inject-overlays-global =
+        { lib, ... }:
+        {
+          nixpkgs.overlays = lib.mkBefore [
+            # !!! causes _lots_ of rebuilds for graphical stuff via ffmpeg, pipewire
+            self.overlays.pkgs
+          ];
+        };
+
+    }
+  ); # flib
+in
+flib
