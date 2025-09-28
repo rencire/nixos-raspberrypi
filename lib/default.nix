@@ -20,7 +20,7 @@ let
       # TODO how is this differetn from nixosInstaller?
       mkNixOSRPiInstaller =
         modules:
-        self.nixosInstaller {
+        self.lib.nixosInstaller {
           specialArgs = self.inputs // {
             nixos-raspberrypi = self;
           };
